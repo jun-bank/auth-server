@@ -290,47 +290,90 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ## 📂 패키지 구조
 
 ```
-com.junbank.auth
+com.jun_bank.auth_server
 ├── AuthServerApplication.java
-├── domain
-│   ├── entity
-│   │   ├── RefreshToken.java
-│   │   └── LoginHistory.java
-│   └── repository
-│       ├── RefreshTokenRepository.java
-│       └── LoginHistoryRepository.java
-├── application
-│   ├── service
-│   │   ├── AuthService.java
-│   │   └── JwtService.java
-│   └── dto
-│       ├── request
-│       │   ├── LoginRequest.java
-│       │   ├── RefreshRequest.java
-│       │   └── ValidateRequest.java
-│       └── response
-│           ├── TokenResponse.java
-│           ├── ValidateResponse.java
-│           └── LoginHistoryResponse.java
-├── infrastructure
-│   ├── jwt
-│   │   ├── JwtTokenProvider.java
-│   │   └── JwtProperties.java
-│   ├── kafka
-│   │   ├── AuthEventProducer.java
-│   │   └── UserEventConsumer.java
-│   ├── feign
-│   │   └── UserServiceClient.java
-│   └── config
-│       ├── SecurityConfig.java
-│       ├── JwtConfig.java
-│       └── KafkaConfig.java
-└── presentation
-    ├── controller
-    │   └── AuthController.java
-    └── advice
-        └── AuthExceptionHandler.java
+├── global/                          # 전역 설정 레이어
+│   ├── config/                      # 설정 클래스
+│   │   ├── JpaConfig.java           # JPA Auditing 활성화
+│   │   ├── QueryDslConfig.java      # QueryDSL JPAQueryFactory 빈
+│   │   ├── KafkaProducerConfig.java # Kafka Producer (멱등성, JacksonJsonSerializer)
+│   │   ├── KafkaConsumerConfig.java # Kafka Consumer (수동 ACK, JacksonJsonDeserializer)
+│   │   ├── SecurityConfig.java      # Spring Security + PasswordEncoder
+│   │   ├── FeignConfig.java         # Feign Client 설정
+│   │   ├── SwaggerConfig.java       # OpenAPI 문서화
+│   │   └── AsyncConfig.java         # 비동기 처리 (ThreadPoolTaskExecutor)
+│   ├── infrastructure/
+│   │   ├── entity/
+│   │   │   └── BaseEntity.java      # 공통 엔티티 (Audit, Soft Delete)
+│   │   └── jpa/
+│   │       └── AuditorAwareImpl.java # JPA Auditing 사용자 정보
+│   ├── security/
+│   │   └── SecurityContextUtil.java # SecurityContext 유틸리티
+│   ├── feign/
+│   │   ├── FeignErrorDecoder.java   # Feign 에러 → BusinessException 변환
+│   │   └── FeignRequestInterceptor.java # 인증 헤더 전파
+│   └── aop/
+│       └── LoggingAspect.java       # 요청/응답 로깅 AOP
+└── domain/
+    └── auth/                        # Auth 도메인
+        ├── domain/                  # 순수 도메인 (Entity, VO, Enum)
+        ├── application/             # 유스케이스, Port, DTO
+        ├── infrastructure/          # Adapter (Out) - Repository, JWT, Kafka
+        │   └── jwt/                 # JWT 관련 (추후 구현)
+        │       ├── JwtTokenProvider.java
+        │       └── JwtProperties.java
+        └── presentation/            # Adapter (In) - Controller
 ```
+
+---
+
+## 🔧 Global 레이어 상세
+
+### Config 설정
+
+| 클래스 | 설명 |
+|--------|------|
+| `JpaConfig` | JPA Auditing 활성화 (`@EnableJpaAuditing`) |
+| `QueryDslConfig` | `JPAQueryFactory` 빈 등록 |
+| `KafkaProducerConfig` | 멱등성 Producer (ENABLE_IDEMPOTENCE=true, ACKS=all) |
+| `KafkaConsumerConfig` | 수동 ACK (MANUAL_IMMEDIATE), group-id: auth-server-group |
+| `SecurityConfig` | JWT 발급 서버로서 /api/auth/** 허용, PasswordEncoder 빈 등록 |
+| `FeignConfig` | 로깅 레벨 BASIC, 에러 디코더, 요청 인터셉터 |
+| `SwaggerConfig` | OpenAPI 3.0 문서화 설정 |
+| `AsyncConfig` | ThreadPoolTaskExecutor (core=5, max=10, queue=25) |
+
+### Auth Server 특수 설정
+
+> **Note**: Auth Server는 JWT 발급 서버로서 다른 비즈니스 서비스와 다른 Security 설정을 가짐
+
+- `HeaderAuthenticationFilter` 없음 (JWT 발급 서버이므로)
+- `PasswordEncoder` 빈 등록 (비밀번호 검증용)
+- `/api/auth/**` 경로 인증 없이 허용
+
+### BaseEntity (Soft Delete 지원)
+
+```java
+@MappedSuperclass
+public abstract class BaseEntity {
+    private LocalDateTime createdAt;      // 생성일시 (자동)
+    private LocalDateTime updatedAt;      // 수정일시 (자동)
+    private String createdBy;             // 생성자 (자동)
+    private String updatedBy;             // 수정자 (자동)
+    private LocalDateTime deletedAt;      // 삭제일시
+    private String deletedBy;             // 삭제자
+    private Boolean isDeleted = false;    // 삭제 여부
+    
+    public void delete(String deletedBy);  // Soft Delete
+    public void restore();                 // 복구
+}
+```
+
+### 추후 구현 예정 (JWT)
+
+| 클래스 | 설명 |
+|--------|------|
+| `JwtTokenProvider` | JWT 토큰 생성/검증/파싱 |
+| `JwtProperties` | JWT 설정값 (secret, expiration 등) |
 
 ---
 
