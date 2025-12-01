@@ -1,6 +1,6 @@
-package com.jun_bank.auth_server.domain.auth.domain.model.vo;
+package com.jun_bank.auth_server.domain.history.domain.model.vo;
 
-import com.jun_bank.auth_server.domain.auth.domain.exception.AuthException;
+import com.jun_bank.auth_server.domain.history.domain.exception.HistoryException;
 import com.jun_bank.common_lib.util.UuidUtils;
 
 /**
@@ -34,11 +34,11 @@ public record LoginHistoryId(String value) {
      * </p>
      *
      * @param value 로그인 이력 ID 문자열
-     * @throws AuthException ID 형식이 유효하지 않은 경우 (AUTH_034)
+     * @throws HistoryException ID 형식이 유효하지 않은 경우 (LGH_030)
      */
     public LoginHistoryId {
         if (!UuidUtils.isValidDomainId(value, PREFIX)) {
-            throw AuthException.invalidLoginHistoryIdFormat(value);
+            throw HistoryException.invalidLoginHistoryIdFormat(value);
         }
     }
 
@@ -47,7 +47,7 @@ public record LoginHistoryId(String value) {
      *
      * @param value 로그인 이력 ID 문자열
      * @return LoginHistoryId 객체
-     * @throws AuthException ID 형식이 유효하지 않은 경우
+     * @throws HistoryException ID 형식이 유효하지 않은 경우
      */
     public static LoginHistoryId of(String value) {
         return new LoginHistoryId(value);
