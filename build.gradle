@@ -29,6 +29,7 @@ dependencies {
     // Common Library (공통 모듈)
     // ========================================
     implementation 'io.github.jun-bank:common-lib:0.0.1'
+
     // ========================================
     // Spring Boot Core
     // ========================================
@@ -58,6 +59,16 @@ dependencies {
     runtimeOnly "io.jsonwebtoken:jjwt-impl:${jjwtVersion}"
     // JJWT Jackson (JSON 직렬화/역직렬화)
     runtimeOnly "io.jsonwebtoken:jjwt-jackson:${jjwtVersion}"
+
+    // ========================================
+    // Redis - 캐시 & 세션 관리
+    // ========================================
+    // Spring Data Redis (Redis 클라이언트)
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    // Lettuce (Redis 클라이언트 - Primary/Replica 지원)
+    // spring-boot-starter-data-redis에 포함되어 있음
+    // Commons Pool2 (Lettuce 커넥션 풀)
+    implementation 'org.apache.commons:commons-pool2'
 
     // ========================================
     // Spring Cloud - MSA 인프라
@@ -139,8 +150,6 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     // Kafka Test (EmbeddedKafka 등)
     testImplementation 'org.springframework.kafka:spring-kafka-test'
-    // Kafka Test (EmbeddedKafka 등)
-    testImplementation 'org.springframework.kafka:spring-kafka-test'
     // H2 Database (인메모리 DB, 테스트용)
     testRuntimeOnly 'com.h2database:h2'
     // JUnit Platform Launcher
@@ -148,6 +157,8 @@ dependencies {
     // Lombok for Test
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
+    // Embedded Redis (테스트용 인메모리 Redis)
+    testImplementation 'com.github.codemonstur:embedded-redis:1.4.3'
 }
 
 dependencyManagement {
