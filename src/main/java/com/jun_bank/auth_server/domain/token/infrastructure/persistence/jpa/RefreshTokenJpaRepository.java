@@ -20,6 +20,20 @@ public interface RefreshTokenJpaRepository extends JpaRepository<RefreshTokenEnt
             @Param("now") LocalDateTime now
     );
 
-    List<RefreshTokenEntity>
+    List<RefreshTokenEntity> findByUserId(String userId);
 
+    @Query("SELECT r FROM RefreshTokenEntity r WHERE r.userId = :userId " +
+            "AND r.isRevoked = false AND r.expiresAt > :now " +
+            "ORDER BY r.createdAt DESC")
+    List<RefreshTokenEntity> findValidTokensByUserId(
+            @Param("userId") String userId,
+            @Param("now") LocalDateTime now
+    );
+
+    @Query("SELECT COUNT(r) FROM RefreshTokenEntity r WHERE r.userId " +
+            "AND r.isRevoked = false AND r.expiresAt > :now")
+    long countValidTokensByUserId(
+            @Param("userId") String userId,
+            @Param("now") LocalDateTime now
+    );
 }
