@@ -34,13 +34,13 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(
-    name = "auth_users",
-    indexes = {
-        @Index(name = "idx_auth_user_email", columnList = "email", unique = true),
-        @Index(name = "idx_auth_user_user_id", columnList = "user_id"),
-        @Index(name = "idx_auth_user_status", columnList = "status"),
-        @Index(name = "idx_auth_user_is_deleted", columnList = "is_deleted")
-    }
+        name = "auth_users",
+        indexes = {
+                @Index(name = "idx_auth_user_email", columnList = "email", unique = true),
+                @Index(name = "idx_auth_user_user_id", columnList = "user_id"),
+                @Index(name = "idx_auth_user_status", columnList = "status"),
+                @Index(name = "idx_auth_user_is_deleted", columnList = "is_deleted")
+        }
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -114,8 +114,8 @@ public class AuthUserEntity extends BaseEntity {
    * 전체 필드 생성자 (Mapper에서 사용)
    */
   private AuthUserEntity(String authUserId, String userId, String email, String password,
-      UserRole role, AuthUserStatus status, int failedLoginAttempts,
-      LocalDateTime lockedUntil, LocalDateTime lastLoginAt) {
+                         UserRole role, AuthUserStatus status, int failedLoginAttempts,
+                         LocalDateTime lockedUntil, LocalDateTime lastLoginAt) {
     this.authUserId = authUserId;
     this.userId = userId;
     this.email = email;
@@ -142,11 +142,11 @@ public class AuthUserEntity extends BaseEntity {
    * @return AuthUserEntity
    */
   public static AuthUserEntity of(String authUserId, String userId, String email,
-      String password, UserRole role, AuthUserStatus status,
-      int failedLoginAttempts, LocalDateTime lockedUntil,
-      LocalDateTime lastLoginAt) {
+                                  String password, UserRole role, AuthUserStatus status,
+                                  int failedLoginAttempts, LocalDateTime lockedUntil,
+                                  LocalDateTime lastLoginAt) {
     return new AuthUserEntity(authUserId, userId, email, password, role, status,
-        failedLoginAttempts, lockedUntil, lastLoginAt);
+            failedLoginAttempts, lockedUntil, lastLoginAt);
   }
 
   // ========================================
@@ -168,8 +168,8 @@ public class AuthUserEntity extends BaseEntity {
    * @param lastLoginAt         마지막 로그인 시간
    */
   public void update(String password, UserRole role, AuthUserStatus status,
-      int failedLoginAttempts, LocalDateTime lockedUntil,
-      LocalDateTime lastLoginAt) {
+                     int failedLoginAttempts, LocalDateTime lockedUntil,
+                     LocalDateTime lastLoginAt) {
     this.password = password;
     this.role = role;
     this.status = status;
