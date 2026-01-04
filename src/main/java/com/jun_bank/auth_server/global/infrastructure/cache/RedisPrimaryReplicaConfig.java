@@ -48,8 +48,10 @@ import java.time.Duration;
  * <h3>Lua Script 로딩:</h3>
  * <ul>
  *   <li>refresh_token_save.lua - 토큰 저장 (중복 처리)</li>
- *   <li>refresh_token_revoke.lua - 토큰 폐기</li>
+ *   <li>refresh_token_revoke.lua - 단일 토큰 폐기</li>
+ *   <li>refresh_token_revoke_all.lua - 전체 토큰 폐기</li>
  *   <li>login_attempt.lua - 로그인 시도 카운팅</li>
+ *   <li>ip_rate_limit.lua - IP Rate Limiting</li>
  * </ul>
  */
 @Slf4j
@@ -60,6 +62,10 @@ import java.time.Duration;
 public class RedisPrimaryReplicaConfig {
 
   private final RedisProperties redisProperties;
+
+  // ========================================
+  // Connection Factory
+  // ========================================
 
   /**
    * Primary-Replica 연결 팩토리
@@ -73,16 +79,16 @@ public class RedisPrimaryReplicaConfig {
   public LettuceConnectionFactory redisConnectionFactory() {
     // Primary 노드 설정
     RedisStaticMasterReplicaConfiguration config =
-        new RedisStaticMasterReplicaConfiguration(
-            redisProperties.getPrimary().getHost(),
-            redisProperties.getPrimary().getPort()
-        );
+            new RedisStaticMasterReplicaConfiguration(
+                    redisProperties.getPrimary().getHost(),
+                    redisProperties.getPrimary().getPort()
+            );
 
     // Replica 노드 추가 (설정된 경우)
     if (redisProperties.hasReplica()) {
       config.addNode(
-          redisProperties.getReplica().getHost(),
-          redisProperties.getReplica().getPort()
+              redisProperties.getReplica().getHost(),
+              redisProperties.getReplica().getPort()
       );
       log.info("Redis Replica 노드 추가: {}", redisProperties.getReplicaAddress());
     }
@@ -101,17 +107,21 @@ public class RedisPrimaryReplicaConfig {
 
     // Lettuce 클라이언트 설정 - 읽기는 Replica 우선
     LettucePoolingClientConfiguration clientConfig = LettucePoolingClientConfiguration.builder()
-        .poolConfig(poolConfig)
-        .commandTimeout(Duration.ofMillis(redisProperties.getTimeout()))
-        .readFrom(redisProperties.hasReplica() ? ReadFrom.REPLICA_PREFERRED : ReadFrom.MASTER)
-        .build();
+            .poolConfig(poolConfig)
+            .commandTimeout(Duration.ofMillis(redisProperties.getTimeout()))
+            .readFrom(redisProperties.hasReplica() ? ReadFrom.REPLICA_PREFERRED : ReadFrom.MASTER)
+            .build();
 
     log.info("Redis 연결 설정 완료 - Primary: {}, Replica: {}",
-        redisProperties.getPrimaryAddress(),
-        redisProperties.hasReplica() ? redisProperties.getReplicaAddress() : "없음");
+            redisProperties.getPrimaryAddress(),
+            redisProperties.hasReplica() ? redisProperties.getReplicaAddress() : "없음");
 
     return new LettuceConnectionFactory(config, clientConfig);
   }
+
+  // ========================================
+  // RedisTemplate
+  // ========================================
 
   /**
    * RedisTemplate 설정
@@ -131,8 +141,7 @@ public class RedisPrimaryReplicaConfig {
 
     // Value: JSON (Jackson 3 기반 - Spring Data Redis 4.0)
     GenericJacksonJsonRedisSerializer jsonSerializer = GenericJacksonJsonRedisSerializer.builder()
-        .enableSpringCacheNullValueSupport()
-        .build();
+            .build();
     template.setValueSerializer(jsonSerializer);
     template.setHashValueSerializer(jsonSerializer);
 
@@ -159,7 +168,7 @@ public class RedisPrimaryReplicaConfig {
   }
 
   // ========================================
-  // Lua Scripts
+  // Lua Scripts - RefreshToken
   // ========================================
 
   /**
@@ -172,43 +181,69 @@ public class RedisPrimaryReplicaConfig {
   public DefaultRedisScript<String> refreshTokenSaveScript() {
     DefaultRedisScript<String> script = new DefaultRedisScript<>();
     script.setScriptSource(new ResourceScriptSource(
-        new ClassPathResource("lua/refresh_token_save.lua")));
+            new ClassPathResource("lua/refresh_token_save.lua")));
     script.setResultType(String.class);
     return script;
   }
 
   /**
-   * RefreshToken 폐기 Lua Script
+   * RefreshToken 단일 폐기 Lua Script
    */
   @Bean
   public DefaultRedisScript<Long> refreshTokenRevokeScript() {
     DefaultRedisScript<Long> script = new DefaultRedisScript<>();
     script.setScriptSource(new ResourceScriptSource(
-        new ClassPathResource("lua/refresh_token_revoke.lua")));
+            new ClassPathResource("lua/refresh_token_revoke.lua")));
     script.setResultType(Long.class);
     return script;
   }
 
   /**
-   * 전체 로그아웃 Lua Script
+   * RefreshToken 전체 폐기 Lua Script (전체 로그아웃)
    */
   @Bean
   public DefaultRedisScript<Long> refreshTokenRevokeAllScript() {
     DefaultRedisScript<Long> script = new DefaultRedisScript<>();
     script.setScriptSource(new ResourceScriptSource(
-        new ClassPathResource("lua/refresh_token_revoke_all.lua")));
+            new ClassPathResource("lua/refresh_token_revoke_all.lua")));
     script.setResultType(Long.class);
     return script;
   }
 
+  // ========================================
+  // Lua Scripts - Login Attempt
+  // ========================================
+
   /**
    * 로그인 시도 카운팅 Lua Script
+   * <p>
+   * 원자적으로 실패 횟수 카운팅 및 계정 잠금 처리
+   * </p>
    */
   @Bean
   public DefaultRedisScript<String> loginAttemptScript() {
     DefaultRedisScript<String> script = new DefaultRedisScript<>();
     script.setScriptSource(new ResourceScriptSource(
-        new ClassPathResource("lua/login_attempt.lua")));
+            new ClassPathResource("lua/login_attempt.lua")));
+    script.setResultType(String.class);
+    return script;
+  }
+
+  // ========================================
+  // Lua Scripts - IP Rate Limit
+  // ========================================
+
+  /**
+   * IP Rate Limiting Lua Script
+   * <p>
+   * 원자적으로 IP별 요청 제한 및 자동 차단 처리
+   * </p>
+   */
+  @Bean
+  public DefaultRedisScript<String> ipRateLimitScript() {
+    DefaultRedisScript<String> script = new DefaultRedisScript<>();
+    script.setScriptSource(new ResourceScriptSource(
+            new ClassPathResource("lua/ip_rate_limit.lua")));
     script.setResultType(String.class);
     return script;
   }
