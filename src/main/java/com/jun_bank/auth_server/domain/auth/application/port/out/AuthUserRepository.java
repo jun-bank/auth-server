@@ -165,4 +165,110 @@ public interface AuthUserRepository {
    * @param deletedBy 삭제자 ID
    */
   void deleteByUserId(String userId, String deletedBy);
+
+  // ========================================
+  // 로그인 시도 관리 (Cache)
+  // ========================================
+
+  /**
+   * 로그인 실패 기록
+   * <p>
+   * Redis에 원자적으로 실패 횟수를 증가시킵니다.
+   * 최대 횟수 초과 시 자동으로 계정이 잠깁니다.
+   * </p>
+   *
+   * @param email 이메일
+   * @return AttemptResult (상태, 시도 횟수, 남은 잠금 시간)
+   */
+  LoginAttemptResult recordLoginFailure(String email);
+
+  /**
+   * 로그인 성공 기록
+   * <p>
+   * Redis의 실패 카운터를 초기화합니다.
+   * </p>
+   *
+   * @param email 이메일
+   */
+  void recordLoginSuccess(String email);
+
+  /**
+   * 계정 잠금 여부 확인
+   * <p>
+   * Redis에서 빠르게 확인합니다.
+   * </p>
+   *
+   * @param email 이메일
+   * @return 잠금 상태면 true
+   */
+  boolean isAccountLocked(String email);
+
+  /**
+   * 현재 실패 횟수 조회
+   *
+   * @param email 이메일
+   * @return 실패 횟수
+   */
+  int getFailedAttempts(String email);
+
+  /**
+   * 남은 잠금 시간 조회 (초)
+   *
+   * @param email 이메일
+   * @return 남은 시간 (초), 잠금 상태가 아니면 0
+   */
+  long getRemainingLockSeconds(String email);
+
+  // ========================================
+  // 로그인 시도 결과 DTO
+  // ========================================
+
+  /**
+   * 로그인 시도 상태
+   */
+  enum LoginAttemptStatus {
+    /** 정상 */
+    OK,
+    /** 이번 요청으로 잠금됨 */
+    LOCKED,
+    /** 이미 잠금 상태 */
+    ALREADY_LOCKED,
+    /** 에러 발생 */
+    ERROR;
+
+    public boolean isLocked() {
+      return this == LOCKED || this == ALREADY_LOCKED;
+    }
+  }
+
+  /**
+   * 로그인 시도 결과
+   */
+  record LoginAttemptResult(
+          String email,
+          LoginAttemptStatus status,
+          int attempts,
+          long remainingSeconds,
+          String errorMessage
+  ) {
+    public boolean isLocked() {
+      return status.isLocked();
+    }
+
+    public boolean isSuccess() {
+      return status != LoginAttemptStatus.ERROR;
+    }
+
+    public boolean justLocked() {
+      return status == LoginAttemptStatus.LOCKED;
+    }
+
+    public long getRemainingMinutes() {
+      return remainingSeconds / 60;
+    }
+
+    public static LoginAttemptResult error(String email, String message) {
+      return new LoginAttemptResult(email, LoginAttemptStatus.ERROR, 0, 0, message);
+    }
+  }
 }
