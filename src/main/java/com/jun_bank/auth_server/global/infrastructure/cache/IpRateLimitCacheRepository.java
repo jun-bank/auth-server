@@ -138,7 +138,7 @@ public class IpRateLimitCacheRepository {
     RateLimitResult result = executeScript(
             ipAddress, "IS_BLOCKED", 0, 0, 0, null
     );
-    return result.blocked();
+    return result.isBlocked();
   }
 
   /**
@@ -207,7 +207,10 @@ public class IpRateLimitCacheRepository {
               ? node.get("reason").asText()
               : null;
 
-      return new RateLimitResult(key, allowed, currentCount, blocked, remainingSeconds, reason);
+      RateLimitStatus status = blocked ? RateLimitStatus.BLOCKED
+              : (allowed ? RateLimitStatus.ALLOWED : RateLimitStatus.BLOCKED);
+
+      return new RateLimitResult(key, status, currentCount, remainingSeconds, reason);
 
     } catch (Exception e) {
       log.warn("Rate Limit 결과 파싱 실패: key={}, error={}", key, e.getMessage());
@@ -220,28 +223,60 @@ public class IpRateLimitCacheRepository {
   // ========================================
 
   /**
+   * Rate Limit 상태
+   */
+  public enum RateLimitStatus {
+    /** 허용 */
+    ALLOWED,
+    /** 차단됨 */
+    BLOCKED,
+    /** 에러 */
+    ERROR;
+
+    public boolean isAllowed() {
+      return this == ALLOWED;
+    }
+
+    public boolean isBlocked() {
+      return this == BLOCKED;
+    }
+  }
+
+  /**
    * Rate Limit 결과
    *
    * @param key              Rate Limit 키
-   * @param allowed          요청 허용 여부
+   * @param status           상태 (ALLOWED, BLOCKED, ERROR)
    * @param currentCount     현재 요청 수
-   * @param blocked          차단 상태
    * @param remainingSeconds 남은 차단 시간 (초)
    * @param reason           차단 사유
    */
   public record RateLimitResult(
           String key,
-          boolean allowed,
+          RateLimitStatus status,
           int currentCount,
-          boolean blocked,
           long remainingSeconds,
           String reason
   ) {
     /**
+     * 요청 허용 여부
+     */
+    public boolean isAllowed() {
+      return status.isAllowed();
+    }
+
+    /**
      * 차단되어 요청이 거부됨
      */
     public boolean isDenied() {
-      return !allowed;
+      return !isAllowed();
+    }
+
+    /**
+     * 차단 상태
+     */
+    public boolean isBlocked() {
+      return status.isBlocked();
     }
 
     /**
@@ -255,7 +290,7 @@ public class IpRateLimitCacheRepository {
      * 허용 결과 생성 (에러 시 기본값)
      */
     public static RateLimitResult allowed(String key) {
-      return new RateLimitResult(key, true, 0, false, 0, null);
+      return new RateLimitResult(key, RateLimitStatus.ALLOWED, 0, 0, null);
     }
   }
 }
