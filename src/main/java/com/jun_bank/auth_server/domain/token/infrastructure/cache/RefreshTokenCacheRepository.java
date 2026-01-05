@@ -293,7 +293,7 @@ public class RefreshTokenCacheRepository {
         }
         try {
             JsonNode node = JSON_MAPPER.readTree(json);
-            String status = node.get("status").asText();
+            SaveStatus status = SaveStatus.fromString(node.get("status").asText());
             String removedToken = node.has("removedToken") && !node.get("removedToken").isNull()
                     ? node.get("removedToken").asText()
                     : null;
@@ -308,27 +308,60 @@ public class RefreshTokenCacheRepository {
     // ========================================
 
     /**
+     * 토큰 저장 상태
+     */
+    public enum SaveStatus {
+        /** 신규 생성 */
+        CREATED,
+        /** 기존 토큰 교체 (같은 디바이스) */
+        REPLACED,
+        /** 최대 세션 초과로 가장 오래된 토큰 삭제 */
+        OVERFLOW,
+        /** 에러 발생 */
+        ERROR;
+
+        /**
+         * 문자열에서 변환 (Lua Script 결과 파싱용)
+         */
+        public static SaveStatus fromString(String value) {
+            if (value == null) {
+                return ERROR;
+            }
+            return switch (value) {
+                case "CREATED" -> CREATED;
+                case "REPLACED" -> REPLACED;
+                case "OVERFLOW" -> OVERFLOW;
+                default -> ERROR;
+            };
+        }
+
+        public boolean isSuccess() {
+            return this != ERROR;
+        }
+    }
+
+    /**
      * 토큰 저장 결과
      */
     public record SaveResult(
-            String status,      // CREATED, REPLACED, OVERFLOW, ERROR
+            SaveStatus status,
             String removedToken,
             String errorMessage
     ) {
         public boolean isSuccess() {
-            return !"ERROR".equals(status);
+            return status.isSuccess();
         }
 
         public boolean isReplaced() {
-            return "REPLACED".equals(status);
+            return status == SaveStatus.REPLACED;
         }
 
         public boolean isOverflow() {
-            return "OVERFLOW".equals(status);
+            return status == SaveStatus.OVERFLOW;
         }
 
         public static SaveResult error(String message) {
-            return new SaveResult("ERROR", null, message);
+            return new SaveResult(SaveStatus.ERROR, null, message);
         }
     }
 }
