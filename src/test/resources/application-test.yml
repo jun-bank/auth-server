@@ -1,0 +1,180 @@
+# ========================================
+# Auth Server 테스트 설정
+# ========================================
+# 실제 application.yml 구조 기반
+# Config Server, Eureka 비활성화
+# H2 + Testcontainers Redis 사용
+# ========================================
+
+spring:
+  application:
+    name: auth-server-test
+
+  main:
+    allow-bean-definition-overriding: true
+
+  config:
+    import: "optional:"
+
+  cloud:
+    config:
+      enabled: false
+
+  # ========================================
+  # 데이터베이스 (H2 인메모리)
+  # ========================================
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+
+  # ========================================
+  # Kafka 설정
+  # ========================================
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      auto-offset-reset: earliest
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    template:
+      default-topic: auth-events
+
+  # ========================================
+  # SpringDoc 비활성화
+  # ========================================
+  autoconfigure:
+    exclude:
+      - org.springdoc.core.configuration.SpringDocConfiguration
+
+# ========================================
+# SpringDoc 비활성화
+# ========================================
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+# ========================================
+# 서버 설정
+# ========================================
+server:
+  port: 8086
+  shutdown: graceful
+
+# ========================================
+# Eureka 비활성화
+# ========================================
+eureka:
+  client:
+    enabled: false
+
+# ========================================
+# Redis Primary-Replica 설정
+# Testcontainers에서 동적 주입
+# ========================================
+redis:
+  primary:
+    host: localhost
+    port: 6379
+    database: 0
+  replica:
+    host: localhost
+    port: 6379
+    database: 0
+  password:
+  timeout: 3000
+  pool:
+    max-active: 10
+    max-idle: 5
+    min-idle: 1
+    max-wait: 3000
+
+# ========================================
+# JWT 설정 (테스트용)
+# ========================================
+jwt:
+  issuer: jun-bank-auth-server-test
+  key-id: jun-bank-key-test
+  key-directory: data/keys
+  private-key:
+  public-key:
+  private-key-path:
+  public-key-path:
+  access-token:
+    expiration: 1800000
+    header: Authorization
+    prefix: Bearer
+  refresh-token:
+    expiration: 604800000
+
+# ========================================
+# Kafka 토픽 정의
+# ========================================
+kafka:
+  topic:
+    login-success: auth.login.success
+    login-failed: auth.login.failed
+    logout: auth.logout
+    token-refreshed: auth.token.refreshed
+    user-created: user.created
+    user-deleted: user.deleted
+
+# ========================================
+# Security 설정
+# ========================================
+security:
+  permit-all-paths:
+    - /api/v1/auth/login
+    - /api/v1/auth/register
+    - /api/v1/auth/refresh
+    - /api/v1/auth/validate
+    - /api/v1/auth/public-key
+    - /api/v1/auth/public-key/info
+    - /.well-known/jwks.json
+    - /internal/**
+    - /actuator/**
+    - /swagger-ui/**
+    - /v3/api-docs/**
+
+# ========================================
+# 서비스 고유 설정
+# ========================================
+auth-server:
+  max-concurrent-sessions: 5
+  refresh-token-reuse: false
+  login-failure-lock-threshold: 5
+  account-lock-duration-minutes: 30
+
+# ========================================
+# Rate Limiting 설정
+# ========================================
+rate-limit:
+  login:
+    max-requests: 50
+    window-seconds: 600
+    block-seconds: 3600
+  api:
+    max-requests: 100
+    window-seconds: 60
+    block-seconds: 600
+
+# ========================================
+# 로깅 설정
+# ========================================
+logging:
+  level:
+    root: WARN
+    com.jun_bank.auth_server: DEBUG
