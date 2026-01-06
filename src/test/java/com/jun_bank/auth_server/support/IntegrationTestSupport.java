@@ -7,8 +7,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 /**
@@ -19,7 +17,7 @@ import org.testcontainers.utility.DockerImageName;
  *
  * <h3>제공 기능:</h3>
  * <ul>
- *   <li>Redis Testcontainer 자동 시작</li>
+ *   <li>Redis Testcontainer 자동 시작 (싱글톤 패턴)</li>
  *   <li>H2 인메모리 DB 설정</li>
  *   <li>테스트용 Security 설정</li>
  *   <li>테스트용 Kafka Mock 설정</li>
@@ -32,28 +30,44 @@ import org.testcontainers.utility.DockerImageName;
  *     // Redis + H2 + Security + Kafka 자동 설정
  * }
  * }</pre>
+ *
+ * <h3>싱글톤 컨테이너 패턴:</h3>
+ * <p>
+ * 모든 테스트 클래스에서 동일한 Redis 컨테이너를 공유합니다.
+ * JVM 종료 시 자동으로 컨테이너가 정리됩니다.
+ * </p>
  */
-@Testcontainers
 @ActiveProfiles("test")
 @Import({TestSecurityConfig.class, TestKafkaConfig.class})
 public abstract class IntegrationTestSupport {
 
     private static final int REDIS_PORT = 6379;
 
-    @Container
-    static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
-            .withExposedPorts(REDIS_PORT)
-            .withReuse(true);  // 테스트 간 컨테이너 재사용 (속도 향상)
+    // 싱글톤 컨테이너 - static 블록에서 한 번만 시작
+    static final GenericContainer<?> REDIS;
+
+    static {
+        REDIS = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
+                .withExposedPorts(REDIS_PORT);
+        REDIS.start();
+
+        // JVM 종료 시 컨테이너 정리
+        Runtime.getRuntime().addShutdownHook(new Thread(REDIS::stop));
+
+        System.out.println("==============================================");
+        System.out.println("Redis 컨테이너 시작됨 - Port: " + REDIS.getMappedPort(REDIS_PORT));
+        System.out.println("==============================================");
+    }
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
-        // Redis 설정
-        registry.add("spring.data.redis.host", redis::getHost);
-        registry.add("spring.data.redis.port", redis::getFirstMappedPort);
-        registry.add("redis.primary.host", redis::getHost);
-        registry.add("redis.primary.port", redis::getFirstMappedPort);
-        registry.add("redis.replica.host", redis::getHost);
-        registry.add("redis.replica.port", redis::getFirstMappedPort);
+        // Redis 설정 - 싱글톤 컨테이너 사용
+        registry.add("spring.data.redis.host", REDIS::getHost);
+        registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(REDIS_PORT));
+        registry.add("redis.primary.host", REDIS::getHost);
+        registry.add("redis.primary.port", () -> REDIS.getMappedPort(REDIS_PORT));
+        registry.add("redis.replica.host", REDIS::getHost);
+        registry.add("redis.replica.port", () -> REDIS.getMappedPort(REDIS_PORT));
 
         // H2 인메모리 DB 설정
         registry.add("spring.datasource.url", () -> "jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1");
