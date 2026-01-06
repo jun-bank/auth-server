@@ -42,6 +42,18 @@ public record UserPrincipal(
         return userId;
     }
 
+    public String getUserId() {
+        return userId;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
     /**
      * Spring Security 권한 목록 반환
      * <p>
