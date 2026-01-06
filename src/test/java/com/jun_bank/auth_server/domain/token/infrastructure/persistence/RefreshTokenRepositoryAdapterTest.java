@@ -30,11 +30,12 @@ class RefreshTokenRepositoryAdapterTest extends IntegrationTestSupport {
 
     @BeforeEach
     void setUp() {
-        // 테스트마다 고유한 토큰 값 사용 (캐시 충돌 방지)
+        // flushAll 제거 - Lettuce 연결 풀 캐싱 문제로 인해
+        // 테스트마다 고유한 토큰 값 사용 (UUID로 충돌 방지)
         String uniqueToken = "jwt." + UUID.randomUUID().toString();
 
         testToken = RefreshToken.createBuilder()
-                .userId("a1b2c3d4e5f6")  // hex ID
+                .userId("a1b2c3d4e5f6")
                 .token(uniqueToken)
                 .expiresAt(LocalDateTime.now().plusDays(7))
                 .deviceInfo("Chrome/120.0")
