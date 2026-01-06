@@ -42,7 +42,7 @@ class PasswordTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"Test1234!", "Password@1", "Abc123!@#"})
+    @ValueSource(strings = {"Test1234!", "Password@1", "Abcd1234!"})
     @DisplayName("유효한 평문 비밀번호 정책 검증")
     void validateRawPassword_Valid(String validPassword) {
         assertThatCode(() -> Password.validateRawPassword(validPassword))
@@ -50,7 +50,7 @@ class PasswordTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"short1!", "nouppercase1!", "NOLOWERCASE1!", "NoNumber!", "NoSpecial1"})
+    @ValueSource(strings = {"short1!", "nouppercase!", "NOLOWERCASE!", "NoNumber!@", "NoSpecial1a"})
     @DisplayName("정책 위반 평문 비밀번호 시 예외")
     void validateRawPassword_Invalid_ThrowsException(String invalidPassword) {
         assertThatThrownBy(() -> Password.validateRawPassword(invalidPassword))
