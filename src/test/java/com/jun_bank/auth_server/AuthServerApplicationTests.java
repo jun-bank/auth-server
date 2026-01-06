@@ -1,5 +1,6 @@
 package com.jun_bank.auth_server;
 
+import com.jun_bank.auth_server.support.IntegrationTestSupport;
 import com.jun_bank.auth_server.support.config.TestKafkaConfig;
 import com.jun_bank.auth_server.support.config.TestSecurityConfig;
 import org.junit.jupiter.api.Test;
@@ -15,7 +16,7 @@ import org.springframework.test.context.ActiveProfiles;
 @SpringBootTest
 @ActiveProfiles("test")
 @Import({TestSecurityConfig.class, TestKafkaConfig.class})
-class AuthServerApplicationTests {
+class AuthServerApplicationTests extends IntegrationTestSupport {
 
 	@Test
 	void contextLoads() {
