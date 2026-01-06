@@ -23,7 +23,7 @@ class AuthUserMapperTest {
     @DisplayName("toEntity - 신규 생성 시 ID 자동 생성")
     void toEntity_NewUser_GeneratesId() {
         AuthUser domain = AuthUser.createBuilder()
-                .userId("USR-12345678")
+                .userId("USR-a1b2c3d4")
                 .email(Email.of("test@example.com"))
                 .password(Password.of("encoded"))
                 .build();
@@ -31,7 +31,7 @@ class AuthUserMapperTest {
         AuthUserEntity entity = mapper.toEntity(domain);
 
         assertThat(entity.getAuthUserId()).startsWith("AUT-");
-        assertThat(entity.getUserId()).isEqualTo("USR-12345678");
+        assertThat(entity.getUserId()).isEqualTo("USR-a1b2c3d4");
         assertThat(entity.getEmail()).isEqualTo("test@example.com");
     }
 
@@ -39,8 +39,8 @@ class AuthUserMapperTest {
     @DisplayName("toEntity - 기존 사용자는 ID 유지")
     void toEntity_ExistingUser_KeepsId() {
         AuthUser domain = AuthUser.restoreBuilder()
-                .authUserId(AuthUserId.of("AUT-existing1"))
-                .userId("USR-12345678")
+                .authUserId(AuthUserId.of("AUT-e5f6a7b8"))
+                .userId("USR-a1b2c3d4")
                 .email(Email.of("test@example.com"))
                 .password(Password.of("encoded"))
                 .role(UserRole.USER)
@@ -51,15 +51,15 @@ class AuthUserMapperTest {
 
         AuthUserEntity entity = mapper.toEntity(domain);
 
-        assertThat(entity.getAuthUserId()).isEqualTo("AUT-existing1");
+        assertThat(entity.getAuthUserId()).isEqualTo("AUT-e5f6a7b8");
     }
 
     @Test
     @DisplayName("toDomain - Entity → Domain 변환")
     void toDomain() {
         AuthUserEntity entity = AuthUserEntity.of(
-                "AUT-12345678",
-                "USR-12345678",
+                "AUT-a1b2c3d4",
+                "USR-a1b2c3d4",
                 "test@example.com",
                 "encoded",
                 UserRole.ADMIN,
@@ -71,7 +71,7 @@ class AuthUserMapperTest {
 
         AuthUser domain = mapper.toDomain(entity);
 
-        assertThat(domain.getAuthUserId().value()).isEqualTo("AUT-12345678");
+        assertThat(domain.getAuthUserId().value()).isEqualTo("AUT-a1b2c3d4");
         assertThat(domain.getRole()).isEqualTo(UserRole.ADMIN);
         assertThat(domain.getStatus()).isEqualTo(AuthUserStatus.LOCKED);
         assertThat(domain.getFailedLoginAttempts()).isEqualTo(3);
@@ -81,13 +81,13 @@ class AuthUserMapperTest {
     @DisplayName("updateEntity - 변경 사항 반영")
     void updateEntity() {
         AuthUserEntity entity = AuthUserEntity.of(
-                "AUT-12345678", "USR-12345678", "test@example.com",
+                "AUT-a1b2c3d4", "USR-a1b2c3d4", "test@example.com",
                 "oldPassword", UserRole.USER, AuthUserStatus.ACTIVE, 0, null, null
         );
 
         AuthUser domain = AuthUser.restoreBuilder()
-                .authUserId(AuthUserId.of("AUT-12345678"))
-                .userId("USR-12345678")
+                .authUserId(AuthUserId.of("AUT-a1b2c3d4"))
+                .userId("USR-a1b2c3d4")
                 .email(Email.of("test@example.com"))
                 .password(Password.of("newPassword"))
                 .role(UserRole.ADMIN)
@@ -108,8 +108,8 @@ class AuthUserMapperTest {
     @DisplayName("양방향 변환 일관성")
     void roundTrip() {
         AuthUser original = AuthUser.restoreBuilder()
-                .authUserId(AuthUserId.of("AUT-roundtrp1"))
-                .userId("USR-12345678")
+                .authUserId(AuthUserId.of("AUT-c9d0e1f2"))
+                .userId("USR-a1b2c3d4")
                 .email(Email.of("test@example.com"))
                 .password(Password.of("encoded"))
                 .role(UserRole.USER)
