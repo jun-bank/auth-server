@@ -22,6 +22,7 @@ ext {
     set('springCloudVersion', '2025.1.0')
     set('queryDslVersion', '5.1.0')
     set('jjwtVersion', '0.12.6')
+    set('testcontainersVersion', '1.20.4')
 }
 
 dependencies {
@@ -148,6 +149,8 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     // WebMVC Test (MockMvc, Spring Boot 4.0 모듈화)
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    // Security Test (인증/인가 테스트 유틸)
+    testImplementation 'org.springframework.security:spring-security-test'
     // Kafka Test (EmbeddedKafka 등)
     testImplementation 'org.springframework.kafka:spring-kafka-test'
     // H2 Database (인메모리 DB, 테스트용)
@@ -157,8 +160,16 @@ dependencies {
     // Lombok for Test
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
-    // Embedded Redis (테스트용 인메모리 Redis)
-    testImplementation 'com.github.codemonstur:embedded-redis:1.4.3'
+
+    // ========================================
+    // Testcontainers - 통합 테스트용 컨테이너
+    // ========================================
+    // Testcontainers Core
+    testImplementation "org.testcontainers:testcontainers:${testcontainersVersion}"
+    // JUnit 5 Integration
+    testImplementation "org.testcontainers:junit-jupiter:${testcontainersVersion}"
+    // PostgreSQL Container (통합 테스트용)
+    testImplementation "org.testcontainers:postgresql:${testcontainersVersion}"
 }
 
 dependencyManagement {
