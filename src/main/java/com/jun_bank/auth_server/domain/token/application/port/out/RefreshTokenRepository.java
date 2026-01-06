@@ -49,6 +49,18 @@ public interface RefreshTokenRepository {
      */
     RefreshToken save(RefreshToken refreshToken);
 
+    /**
+     * 리프레시 토큰 저장 (최대 세션 수 지정)
+     * <p>
+     * 최대 세션 수를 초과하면 가장 오래된 토큰이 삭제됩니다.
+     * </p>
+     *
+     * @param refreshToken 저장할 토큰
+     * @param maxSessions  최대 허용 세션 수
+     * @return 저장된 토큰 (ID 포함)
+     */
+    RefreshToken save(RefreshToken refreshToken, int maxSessions);
+
     // ========================================
     // 단건 조회
     // ========================================
