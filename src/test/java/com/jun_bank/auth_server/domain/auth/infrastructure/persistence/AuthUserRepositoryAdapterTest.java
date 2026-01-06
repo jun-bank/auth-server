@@ -18,6 +18,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -30,12 +31,19 @@ class AuthUserRepositoryAdapterTest extends IntegrationTestSupport {
     private AuthUserRepository authUserRepository;
 
     private AuthUser testUser;
+    private String testEmail;
+    private String testUserId;
 
     @BeforeEach
     void setUp() {
+        // 테스트마다 고유한 값 사용 (UUID로 충돌 방지)
+        String unique = UUID.randomUUID().toString().substring(0, 8);
+        testEmail = "test-" + unique + "@example.com";
+        testUserId = "a1b2c3d4" + unique.substring(0, 4);
+
         testUser = AuthUser.createBuilder()
-                .userId("USR-a1b2c3d4")
-                .email(Email.of("test@example.com"))
+                .userId(testUserId)
+                .email(Email.of(testEmail))
                 .password(Password.of("Test1234!"))
                 .role(UserRole.USER)
                 .build();
@@ -55,8 +63,8 @@ class AuthUserRepositoryAdapterTest extends IntegrationTestSupport {
             AuthUser saved = authUserRepository.save(testUser);
 
             assertThat(saved.getAuthUserId()).isNotNull();
-            assertThat(saved.getAuthUserId().value()).startsWith("AUT-");
-            assertThat(saved.getEmail().value()).isEqualTo("test@example.com");
+            assertThat(saved.getAuthUserId().value()).matches("AUT-[0-9a-f]{8}");
+            assertThat(saved.getEmail().value()).isEqualTo(testEmail);
             assertThat(saved.getStatus()).isEqualTo(AuthUserStatus.ACTIVE);
         }
 
@@ -88,7 +96,7 @@ class AuthUserRepositoryAdapterTest extends IntegrationTestSupport {
             Optional<AuthUser> found = authUserRepository.findById(saved.getAuthUserId().value());
 
             assertThat(found).isPresent();
-            assertThat(found.get().getEmail().value()).isEqualTo("test@example.com");
+            assertThat(found.get().getEmail().value()).isEqualTo(testEmail);
         }
 
         @Test
@@ -96,10 +104,10 @@ class AuthUserRepositoryAdapterTest extends IntegrationTestSupport {
         void findByEmail() {
             authUserRepository.save(testUser);
 
-            Optional<AuthUser> found = authUserRepository.findByEmail("test@example.com");
+            Optional<AuthUser> found = authUserRepository.findByEmail(testEmail);
 
             assertThat(found).isPresent();
-            assertThat(found.get().getUserId()).isEqualTo("USR-a1b2c3d4");
+            assertThat(found.get().getUserId()).isEqualTo(testUserId);
         }
 
         @Test
@@ -107,16 +115,16 @@ class AuthUserRepositoryAdapterTest extends IntegrationTestSupport {
         void findByUserId() {
             authUserRepository.save(testUser);
 
-            Optional<AuthUser> found = authUserRepository.findByUserId("USR-a1b2c3d4");
+            Optional<AuthUser> found = authUserRepository.findByUserId(testUserId);
 
             assertThat(found).isPresent();
-            assertThat(found.get().getEmail().value()).isEqualTo("test@example.com");
+            assertThat(found.get().getEmail().value()).isEqualTo(testEmail);
         }
 
         @Test
         @DisplayName("존재하지 않는 사용자 조회")
         void findById_NotFound() {
-            Optional<AuthUser> found = authUserRepository.findById("AUT-a1b2c3d4");
+            Optional<AuthUser> found = authUserRepository.findById("a1b2c3d4e5f6");
 
             assertThat(found).isEmpty();
         }
@@ -135,7 +143,7 @@ class AuthUserRepositoryAdapterTest extends IntegrationTestSupport {
         void existsByEmail() {
             authUserRepository.save(testUser);
 
-            assertThat(authUserRepository.existsByEmail("test@example.com")).isTrue();
+            assertThat(authUserRepository.existsByEmail(testEmail)).isTrue();
             assertThat(authUserRepository.existsByEmail("notfound@example.com")).isFalse();
         }
 
@@ -144,8 +152,8 @@ class AuthUserRepositoryAdapterTest extends IntegrationTestSupport {
         void existsByUserId() {
             authUserRepository.save(testUser);
 
-            assertThat(authUserRepository.existsByUserId("USR-a1b2c3d4")).isTrue();
-            assertThat(authUserRepository.existsByUserId("USR-e5f6a7b8")).isFalse();
+            assertThat(authUserRepository.existsByUserId(testUserId)).isTrue();
+            assertThat(authUserRepository.existsByUserId("e5f6a7b8c9d0")).isFalse();
         }
     }
 
@@ -160,7 +168,10 @@ class AuthUserRepositoryAdapterTest extends IntegrationTestSupport {
         @Test
         @DisplayName("로그인 실패 기록")
         void recordLoginFailure() {
-            LoginAttemptResult result = authUserRepository.recordLoginFailure("login-test@example.com");
+            // 테스트마다 고유한 이메일 사용
+            String email = "login-" + UUID.randomUUID().toString().substring(0, 8) + "@test.com";
+
+            LoginAttemptResult result = authUserRepository.recordLoginFailure(email);
 
             assertThat(result.status()).isEqualTo(LoginAttemptStatus.OK);
             assertThat(result.attempts()).isEqualTo(1);
@@ -169,7 +180,7 @@ class AuthUserRepositoryAdapterTest extends IntegrationTestSupport {
         @Test
         @DisplayName("5회 실패 시 잠금")
         void recordLoginFailure_FiveTimes_Locked() {
-            String email = "lock-test@example.com";
+            String email = "lock-" + UUID.randomUUID().toString().substring(0, 8) + "@test.com";
 
             LoginAttemptResult result = null;
             for (int i = 0; i < 5; i++) {
@@ -184,7 +195,7 @@ class AuthUserRepositoryAdapterTest extends IntegrationTestSupport {
         @Test
         @DisplayName("로그인 성공 시 카운터 초기화")
         void recordLoginSuccess() {
-            String email = "success-test@example.com";
+            String email = "success-" + UUID.randomUUID().toString().substring(0, 8) + "@test.com";
             authUserRepository.recordLoginFailure(email);
             authUserRepository.recordLoginFailure(email);
 
@@ -197,7 +208,7 @@ class AuthUserRepositoryAdapterTest extends IntegrationTestSupport {
         @Test
         @DisplayName("잠금 상태 확인")
         void isAccountLocked() {
-            String email = "locked-check@example.com";
+            String email = "locked-" + UUID.randomUUID().toString().substring(0, 8) + "@test.com";
 
             for (int i = 0; i < 5; i++) {
                 authUserRepository.recordLoginFailure(email);
@@ -210,7 +221,7 @@ class AuthUserRepositoryAdapterTest extends IntegrationTestSupport {
         @Test
         @DisplayName("이미 잠긴 계정에 실패 기록 시 ALREADY_LOCKED")
         void recordLoginFailure_AlreadyLocked() {
-            String email = "already-locked@example.com";
+            String email = "already-" + UUID.randomUUID().toString().substring(0, 8) + "@test.com";
 
             for (int i = 0; i < 5; i++) {
                 authUserRepository.recordLoginFailure(email);
@@ -235,9 +246,9 @@ class AuthUserRepositoryAdapterTest extends IntegrationTestSupport {
         void deleteByUserId() {
             authUserRepository.save(testUser);
 
-            authUserRepository.deleteByUserId("USR-a1b2c3d4", "admin");
+            authUserRepository.deleteByUserId(testUserId, "admin");
 
-            Optional<AuthUser> found = authUserRepository.findByUserId("USR-a1b2c3d4");
+            Optional<AuthUser> found = authUserRepository.findByUserId(testUserId);
             assertThat(found).isEmpty();
         }
 
@@ -245,9 +256,9 @@ class AuthUserRepositoryAdapterTest extends IntegrationTestSupport {
         @DisplayName("삭제된 사용자 이메일 조회 불가")
         void findByEmail_DeletedUser() {
             authUserRepository.save(testUser);
-            authUserRepository.deleteByUserId("USR-a1b2c3d4", "admin");
+            authUserRepository.deleteByUserId(testUserId, "admin");
 
-            Optional<AuthUser> found = authUserRepository.findByEmail("test@example.com");
+            Optional<AuthUser> found = authUserRepository.findByEmail(testEmail);
 
             assertThat(found).isEmpty();
         }
