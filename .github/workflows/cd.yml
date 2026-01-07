@@ -1,4 +1,4 @@
-name: Build Config Server Image
+name: Build Auth Server Image
 
 on:
   push:
