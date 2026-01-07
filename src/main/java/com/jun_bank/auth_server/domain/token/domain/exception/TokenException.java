@@ -78,6 +78,34 @@ public class TokenException extends BusinessException {
                 "token=" + maskToken(token));
     }
 
+    /**
+     * 토큰/세션을 찾을 수 없음 예외 생성
+     * <p>
+     * 세션 ID로 토큰을 조회할 수 없는 경우 발생합니다.
+     * </p>
+     *
+     * @return TokenException 인스턴스
+     */
+    public static TokenException tokenNotFound() {
+        return new TokenException(TokenErrorCode.SESSION_NOT_FOUND);
+    }
+
+    // ========================================
+    // 권한 관련 팩토리 메서드
+    // ========================================
+
+    /**
+     * 권한 없음 예외 생성
+     * <p>
+     * 타인의 세션에 접근하려는 경우 발생합니다.
+     * </p>
+     *
+     * @return TokenException 인스턴스
+     */
+    public static TokenException unauthorized() {
+        return new TokenException(TokenErrorCode.UNAUTHORIZED_ACCESS);
+    }
+
     // ========================================
     // 유효성 검증 관련 팩토리 메서드
     // ========================================
