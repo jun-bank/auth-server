@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
  * <ul>
  *   <li>TKN_001~009: 토큰 검증 오류 (401 Unauthorized)</li>
  *   <li>TKN_010~019: 토큰 조회 오류 (404 Not Found)</li>
+ *   <li>TKN_020~029: 권한 오류 (403 Forbidden)</li>
  *   <li>TKN_030~039: 유효성 검증 오류 (400 Bad Request)</li>
  * </ul>
  *
@@ -54,6 +55,22 @@ public enum TokenErrorCode implements ErrorCode {
      * <p>DB에 해당 리프레시 토큰이 존재하지 않는 경우</p>
      */
     REFRESH_TOKEN_NOT_FOUND("TKN_010", "리프레시 토큰을 찾을 수 없습니다", 404),
+
+    /**
+     * 세션을 찾을 수 없음
+     * <p>세션 ID로 토큰을 조회할 수 없는 경우</p>
+     */
+    SESSION_NOT_FOUND("TKN_011", "세션을 찾을 수 없습니다", 404),
+
+    // ========================================
+    // 권한 오류 (403 Forbidden)
+    // ========================================
+
+    /**
+     * 권한 없음
+     * <p>타인의 세션에 접근하려는 경우</p>
+     */
+    UNAUTHORIZED_ACCESS("TKN_020", "해당 세션에 대한 권한이 없습니다", 403),
 
     // ========================================
     // 유효성 검증 오류 (400 Bad Request)
